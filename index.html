@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cadastro Amigo — Assistente Passo a Passo</title>
+  <style>
+    :root{font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;}
+    body{
+      margin:0;
+      background:#071028;
+      color:#E6F0FF;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+    }
+    .main-content{
+      display:flex;
+      gap:18px;
+      align-items:flex-start;
+      justify-content:center;
+      width:100%;
+      max-width:1280px;
+    }
+    .wrap{max-width:960px;width:100%}
+    header{display:flex;align-items:center;gap:12px}
+    h1{margin:0;font-size:20px}
+    .card{background:#071625;border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    .question{font-size:14px;color:#cfe3ff;margin-bottom:8px}
+    .input,.select{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:#021227;color:inherit;font-size:16px}
+    .small{font-size:12px;color:#9fb0d4}
+    .row{display:flex;gap:8px}
+    .btn{background:#0ea5e9;border:none;padding:10px 12px;border-radius:8px;color:#012;cursor:pointer}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit}
+    .preview{white-space:pre-wrap;background:#021425;padding:12px;border-radius:8px;margin-top:12px;border:1px dashed rgba(255,255,255,0.04);font-family:monospace}
+    .side{width:320px}
+    .progress{height:8px;background:linear-gradient(90deg,#06283a 0%, #0b6b9a 50%);border-radius:8px;overflow:hidden}
+    .controls{display:flex;gap:8px;margin-top:10px}
+    .steps{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+    .chip{background:#05283b;padding:6px 8px;border-radius:8px;font-size:13px;border:1px solid rgba(255,255,255,0.02)}
+    footer{margin-top:14px;color:#9fb0d4;font-size:13px}
+    @media(max-width:1200px){
+      .main-content{flex-direction:column;align-items:center;}
+      .side{width:100%;max-width:400px;margin:0 auto;}
+      .wrap{max-width:100%;}
+    }
+    @media(max-width:600px){
+      .main-content{padding:0;}
+      .side{width:100%;max-width:100%;}
+      .wrap{max-width:100%;}
+      .card{padding:8px;}
+    }
+  </style>
+</head>
+<body>
+<div class="main-content">
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <div>
+          <h1>CADASTRO AMIGO — PRÉ-CADASTRO RÁPIDO</h1>
+          <div class="small">Responda uma pergunta por vez. Pressione <strong>Enter</strong> para confirmar e avançar.</div>
+        </div>
+      </header>
+      <div id="progressWrap" style="margin-top:12px">
+        <div class="progress" id="progressBar" style="width:100%"></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="question" id="questionLabel">Carregando...</div>
+        <div id="inputWrap"></div>
+        <div class="controls">
+          <button id="prevBtn" class="btn ghost">Voltar</button>
+          <button id="skipBtn" class="btn ghost">Pular</button>
+          <button id="confirmBtn" class="btn">OK (Enter)</button>
+        </div>
+        <div class="steps" id="answeredChips"></div>
+        <div class="preview" id="previewArea">AQUI FICARÁ O TEXTO DO CADASTRO</div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button id="copyBtn" class="btn">Copiar para WhatsApp</button>
+          <button id="waBtn" class="btn">Abrir WhatsApp Web</button>
+          <button id="finalizeBtn" class="btn ghost">Finalizar (Limpar)</button>
+        </div>
+        <footer>
+          Dica: utilize <strong>Tab</strong> para focar o campo e <strong>Enter</strong> para confirmar. Se quiser editar um campo já respondido clique na etiqueta (chip) correspondente.
+        </footer>
+      </div>
+    </div>
+  </div>
+  <div class="side">
+    <div class="card">
+      <h1 style="font-size:16px;margin:0 0 8px 0">Checklist rápido</h1>
+      <div><label><input type="checkbox" id="chk2via" /> Conferiu 2ª VIA DO CLIENTE</label></div>
+      <div><label><input type="checkbox" id="chkEndereco" /> Conferiu ENDEREÇO</label></div>
+      <div><label><input type="checkbox" id="chkDocFoto" /> DOCUMENTO (FOTO)</label></div>
+      <div><label><input type="checkbox" id="chkTitular" /> TITULAR CONFERE</label></div>
+      <div style="margin-top:12px">
+        <button id="includeChecklist" class="btn ghost">Incluir checklist no texto</button>
+      </div>
+      <div style="margin-top:12px" class="small">Status: <span id="status">PRONTO</span></div>
+    </div>
+  </div>
+</div>
+<script>
+const steps = [
+  {key:'vendedor', label:'Informe o nome do VENDEDOR', placeholder:'Ex: VENDEDOR BLESS', type:'text'},
+  {key:'cliente', label:'Informe o NOME DO CLIENTE (será o H1)', placeholder:'Ex: VENDOR BLESS INTERNET', type:'text'},
+  {key:'tipo', label:'Tipo de cliente', type:'select', options:[{v:'PF',t:'PESSOA FÍSICA'},{v:'PJ',t:'PESSOA JURÍDICA'}]},
+  {key:'documento', label:'Documento (CPF se PF / CNPJ se PJ)', placeholder:'Ex: 54541736810 ou 33108599000130', type:'text', mask:'cpf_cnpj'},
+  {key:'rg', label:'RG', placeholder:'Ex: 398190239', type:'text'},
+  {key:'profissao', label:'Profissão', placeholder:'Ex: MECANICO', type:'text'},
+  {key:'caracteristicas', label:'Características (separe por vírgula, ponto e vírgula ou Enter)', placeholder:'Ex: COM INOVA', type:'textarea'},
+  {key:'plano', label:'Plano', type:'select', options:[
+    {v:'BLESS 900MB COM PORTABILIDADE 99,90',t:'BLESS 900MB COM PORTABILIDADE 99,90'},
+    {v:'BLESS 600MB 99,90',t:'BLESS 600MB 99,90'},
+    {v:'BLESS 800MB 109,90/MÊS',t:'BLESS 800MB 109,90/MÊS'},
+    {v:'BLESS 1GB 149,90/MÊS',t:'BLESS 1GB 149,90/MÊS'},
+    {v:'BLESS 1,5GB 199,90/MÊS',t:'BLESS 1,5GB 199,90/MÊS'}
+   
+  ]},
+  {key:'sexo', label:'Estado civil', type:'select', options:[{v:'CASADO',t:'CASADO'},{v:'CASADA',t:'CASADA'}]},
+  {key:'endereco_log', label:'Endereço - rua e número', placeholder:'AV BRASIL - 00', type:'text'},
+  {key:'endereco_bairro', label:'Bairro', placeholder:'ZONA 07', type:'text'},
+  {key:'endereco_cidade', label:'Cidade - UF', placeholder:'MARINGA - PR', type:'text'},
+  {key:'cep', label:'CEP (somente números)', placeholder:'87140000', type:'text', mask:'cep'},
+  {key:'email', label:'Email', placeholder:'blessInternet@outlook.com', type:'email'},
+  {key:'tel_titular', label:'Telefone TITULAR', placeholder:'44988184629', type:'text', mask:'tel'},
+  {key:'tel_recado', label:'Telefone RECADO', placeholder:'44988240813', type:'text', mask:'tel'},
+  {key:'venc', label:'Vencimento (dia)', placeholder:'10', type:'text'}
+];
+let answers = {};
+let index = 0;
+let includeChecklist = false;
+
+const inputWrap = document.getElementById('inputWrap');
+const qLabel = document.getElementById('questionLabel');
+const preview = document.getElementById('previewArea');
+const chips = document.getElementById('answeredChips');
+const progressBar = document.getElementById('progressBar');
+const statusSpan = document.getElementById('status');
+
+function toUpper(s){ return (s||'').toString().toUpperCase(); }
+function maskCPF_CNPJ(v){
+  v = v.replace(/\D/g,'');
+  if(v.length<=11) return v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/,"$1.$2.$3-$4").replace(/[-.]$/,'');
+  return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/,"$1.$2.$3/$4-$5").replace(/[-./]$/,'');
+}
+function maskTel(v){
+  v = v.replace(/\D/g,'');
+  if(v.length<=10) return v.replace(/(\d{2})(\d{4})(\d{0,4})/,"($1) $2-$3").replace(/[- ]$/,'');
+  return v.replace(/(\d{2})(\d{5})(\d{0,4})/,"($1) $2-$3").replace(/[- ]$/,'');
+}
+function maskCEP(v){
+  v = v.replace(/\D/g,'');
+  return v.replace(/(\d{5})(\d{0,3})/,"$1-$2").replace(/-$/,'');
+}
+
+function setQuestion(i){
+  index = Math.max(0, Math.min(i, steps.length-1));
+  const s = steps[index];
+  qLabel.textContent = s.label;
+  inputWrap.innerHTML = '';
+  let el;
+  if(s.type==='select'){
+    el = document.createElement('select');
+    el.className = 'select';
+    s.options.forEach(opt=>{
+      const o = document.createElement('option');
+      o.value = opt.v;
+      o.textContent = opt.t;
+      el.appendChild(o);
+    });
+    el.value = answers[s.key]||s.options[0].v;
+  } else if(s.type==='textarea'){
+    el = document.createElement('textarea');
+    el.className = 'input';
+    el.rows = 2;
+    el.placeholder = s.placeholder||'';
+    el.value = answers[s.key]||'';
+  } else {
+    el = document.createElement('input');
+    el.className = 'input';
+    el.type = s.type==='email' ? 'email' : 'text';
+    el.placeholder = s.placeholder||'';
+    el.value = answers[s.key]||'';
+  }
+  el.id = 'answerInput';
+  el.autocomplete = 'off';
+  el.addEventListener('input', (e)=>{
+    if(s.mask==='cpf_cnpj') el.value = maskCPF_CNPJ(toUpper(el.value));
+    else if(s.mask==='tel') el.value = maskTel(toUpper(el.value));
+    else if(s.mask==='cep') el.value = maskCEP(toUpper(el.value));
+    else el.value = toUpper(el.value);
+  });
+  el.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' && !e.shiftKey){
+      e.preventDefault(); confirmAnswer();
+    } else if(e.key==='Backspace' && el.value==='' && index>0){
+      e.preventDefault(); setQuestion(index-1);
+    }
+  });
+  inputWrap.appendChild(el);
+  el.focus();
+  updateProgress();
+}
+function updateProgress(){
+  const pct = Math.round(((index) / steps.length) * 100);
+  progressBar.style.background = `linear-gradient(90deg,#0b6b9a ${pct}%, #06283a ${pct}%)`;
+}
+
+function renderChips(){
+  chips.innerHTML = '';
+  steps.forEach((s, i)=>{
+    if(answers[s.key]){
+      const c = document.createElement('div');
+      c.className = 'chip';
+      let val = answers[s.key];
+      if(Array.isArray(val)) val = val.join(', ');
+      c.textContent = `${s.key.toUpperCase()}: ${val}`;
+      c.style.cursor = 'pointer';
+      c.addEventListener('click', ()=> setQuestion(i));
+      chips.appendChild(c);
+    }
+  });
+}
+
+function buildPreview(){
+  const L = v=>toUpper(v||'');
+  const lines = [];
+  lines.push('*NOVA VENDA - BLESS INTERNET*');
+  if(answers['vendedor']) lines.push('VENDEDOR: ' + L(answers['vendedor']));
+  lines.push('');
+  if(answers['cliente']){ lines.push('*' + L(answers['cliente']) + '*'); lines.push(''); }
+  if(answers['tipo']==='PJ'){
+    if(answers['documento']) lines.push('CNPJ: ' + L(answers['documento']));
+  } else {
+    if(answers['documento']) lines.push('CPF: ' + L(answers['documento']));
+  }
+  if(answers['rg']) lines.push('RG: ' + L(answers['rg']));
+  if(answers['caracteristicas']){
+    let parts = answers['caracteristicas'].split(/[\n,;]+/).map(x=>L(x.trim())).filter(Boolean);
+    parts.forEach(p=>lines.push(p));
+  }
+  if(answers['profissao']) lines.push(L(answers['profissao']));
+  if(answers['plano']) lines.push(L(answers['plano']));
+  if(answers['sexo']) lines.push(L(answers['sexo']));
+  lines.push('');
+  lines.push('*Endereço de instalação:*');
+  if(answers['endereco_log']) lines.push(L(answers['endereco_log']));
+  if(answers['endereco_bairro']) lines.push(L(answers['endereco_bairro']));
+  if(answers['endereco_cidade']) lines.push(L(answers['endereco_cidade']));
+  if(answers['cep']) lines.push(L(answers['cep']));
+  lines.push('');
+  if(answers['email']) lines.push(L(answers['email']));
+  if(answers['tel_titular']) lines.push(L(answers['tel_titular']) + ' - TITULAR');
+  if(answers['tel_recado']) lines.push(L(answers['tel_recado']) + ' - RECADO');
+  lines.push('');
+  if(answers['plano']) lines.push('*' + L(answers['plano']) + '*');
+  if(answers['venc']) lines.push('VENC: ' + L(answers['venc']));
+  if(includeChecklist){
+    lines.push('');
+    lines.push('CHECKLIST:');
+    lines.push(document.getElementById('chk2via').checked ? '[X] CONFERIU 2ª VIA DO CLIENTE' : '[ ] CONFERIU 2ª VIA DO CLIENTE');
+    lines.push(document.getElementById('chkEndereco').checked ? '[X] CONFERIU ENDEREÇO' : '[ ] CONFERIU ENDEREÇO');
+    lines.push(document.getElementById('chkDocFoto').checked ? '[X] DOCUMENTO (FOTO)' : '[ ] DOCUMENTO (FOTO)');
+    lines.push(document.getElementById('chkTitular').checked ? '[X] TITULAR CONFERE' : '[ ] TITULAR CONFERE');
+  }
+  preview.textContent = lines.filter(x=>x!==undefined&&x!==null).join('\r\n').trim();
+}
+
+function confirmAnswer(){
+  const s = steps[index];
+  let val = document.getElementById('answerInput').value.trim();
+  if(s.type==='select') val = document.getElementById('answerInput').value;
+  if(s.type==='textarea') val = val.replace(/\r\n/g,'\n');
+  answers[s.key] = val;
+  renderChips();
+  if(index < steps.length-1) setQuestion(index+1);
+  buildPreview();
+}
+function skipQuestion(){
+  answers[steps[index].key] = '';
+  if(index < steps.length-1) setQuestion(index+1);
+  buildPreview();
+}
+function prevQuestion(){
+  if(index>0) setQuestion(index-1);
+}
+
+document.getElementById('confirmBtn').addEventListener('click', confirmAnswer);
+document.getElementById('skipBtn').addEventListener('click', skipQuestion);
+document.getElementById('prevBtn').addEventListener('click', prevQuestion);
+
+document.getElementById('copyBtn').addEventListener('click', async ()=>{
+  const txt = preview.textContent || '';
+  if(!txt.trim()){ alert('Nada para copiar. Responda algumas perguntas primeiro.'); return; }
+  try{
+    await navigator.clipboard.writeText(txt.replace(/\n/g,"\r\n"));
+    alert('Texto copiado! Cole no WhatsApp.');
+    statusSpan.textContent='COPIADO';
+  } catch(e){
+    alert('Não foi possível copiar automaticamente. Selecione o texto e copie manualmente.');
+  }
+});
+
+document.getElementById('waBtn').addEventListener('click', ()=>{
+  const txt = preview.textContent || '';
+  if(!txt.trim()){ alert('Texto vazio. Preencha o cadastro primeiro.'); return; }
+  const encoded = encodeURIComponent(txt.replace(/\n/g,"\r\n"));
+  const url = `https://web.whatsapp.com/send?text=${encoded}`;
+  window.open(url, '_blank');
+});
+
+document.getElementById('includeChecklist').addEventListener('click', ()=>{
+  includeChecklist = !includeChecklist;
+  document.getElementById('includeChecklist').textContent = includeChecklist ? 'Checklist será incluído' : 'Incluir checklist no texto';
+  buildPreview();
+});
+
+document.getElementById('finalizeBtn').addEventListener('click', ()=>{
+  if(!confirm('Finalizar cadastro e limpar todos os campos?')) return;
+  answers = {}; index = 0; includeChecklist = false;
+  document.getElementById('chk2via').checked = false;
+  document.getElementById('chkEndereco').checked = false;
+  document.getElementById('chkDocFoto').checked = false;
+  document.getElementById('chkTitular').checked = false;
+  renderChips(); setQuestion(0);
+  preview.textContent = 'AQUI FICARÁ O TEXTO DO CADASTRO';
+  statusSpan.textContent = 'PRONTO';
+});
+
+function init(){ setQuestion(0); renderChips(); buildPreview(); }
+init();
+</script>
+</body>
+</html>

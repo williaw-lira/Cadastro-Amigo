@@ -106,7 +106,7 @@
 <script>
 const steps = [
   {key:'vendedor', label:'Informe o nome do VENDEDOR', placeholder:'Ex: VENDEDOR BLESS', type:'text'},
-  {key:'cliente', label:'Informe o NOME DO CLIENTE (será o H1)', placeholder:'Ex: VENDOR BLESS INTERNET', type:'text'},
+  {key:'cliente', label:'Informe o NOME DO CLIENTE (será o H1)', placeholder:'Ex: CLIENTE BLESS INTERNET', type:'text'},
   {key:'tipo', label:'Tipo de cliente', type:'select', options:[{v:'PF',t:'PESSOA FÍSICA'},{v:'PJ',t:'PESSOA JURÍDICA'}]},
   {key:'documento', label:'Documento (CPF se PF / CNPJ se PJ)', placeholder:'Ex: 54541736810 ou 33108599000130', type:'text', mask:'cpf_cnpj'},
   {key:'rg', label:'RG', placeholder:'Ex: 398190239', type:'text'},
@@ -244,7 +244,6 @@ function buildPreview(){
     parts.forEach(p=>lines.push(p));
   }
   if(answers['profissao']) lines.push(L(answers['profissao']));
-  if(answers['plano']) lines.push(L(answers['plano']));
   if(answers['sexo']) lines.push(L(answers['sexo']));
   lines.push('');
   lines.push('*Endereço de instalação:*');

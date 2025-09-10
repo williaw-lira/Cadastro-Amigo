@@ -106,8 +106,9 @@
 <script>
 const steps = [
   {key:'vendedor', label:'Informe o nome do VENDEDOR', placeholder:'Ex: VENDEDOR BLESS', type:'text'},
-  {key:'cliente', label:'Informe o NOME DO CLIENTE (será o H1)', placeholder:'Ex: CLIENTE BLESS INTERNET', type:'text'},
   {key:'tipo', label:'Tipo de cliente', type:'select', options:[{v:'PF',t:'PESSOA FÍSICA'},{v:'PJ',t:'PESSOA JURÍDICA'}]},
+  {key:'cliente', label:'Informe o NOME DO CLIENTE (será o H1)', placeholder:'Ex: CLIENTE BLESS INTERNET', type:'text'},
+  {key:'responsavel', label:'Informe o RESPONSÁVEL (apenas PJ)', placeholder:'Ex: NOME DO RESPONSÁVEL', type:'text', onlyPJ:true},
   {key:'documento', label:'Documento (CPF se PF / CNPJ se PJ)', placeholder:'Ex: 54541736810 ou 33108599000130', type:'text', mask:'cpf_cnpj'},
   {key:'rg', label:'RG', placeholder:'Ex: 398190239', type:'text'},
   {key:'profissao', label:'Profissão', placeholder:'Ex: MECANICO', type:'text'},
@@ -118,7 +119,6 @@ const steps = [
     {v:'BLESS 800MB 109,90/MÊS',t:'BLESS 800MB 109,90/MÊS'},
     {v:'BLESS 1GB 149,90/MÊS',t:'BLESS 1GB 149,90/MÊS'},
     {v:'BLESS 1,5GB 199,90/MÊS',t:'BLESS 1,5GB 199,90/MÊS'}
-   
   ]},
   {key:'sexo', label:'Estado civil', type:'select', options:[{v:'CASADO',t:'CASADO'},{v:'CASADA',t:'CASADA'}]},
   {key:'endereco_log', label:'Endereço - rua e número', placeholder:'AV BRASIL - 00', type:'text'},
@@ -158,6 +158,10 @@ function maskCEP(v){
 }
 
 function setQuestion(i){
+  // Pular campo responsável se não for PJ
+  if(steps[i].key === 'responsavel' && answers['tipo'] !== 'PJ') {
+    setQuestion(i+1); return;
+  }
   index = Math.max(0, Math.min(i, steps.length-1));
   const s = steps[index];
   qLabel.textContent = s.label;
@@ -232,7 +236,9 @@ function buildPreview(){
   lines.push('*NOVA VENDA - BLESS INTERNET*');
   if(answers['vendedor']) lines.push('VENDEDOR: ' + L(answers['vendedor']));
   lines.push('');
-  if(answers['cliente']){ lines.push('*' + L(answers['cliente']) + '*'); lines.push(''); }
+  if(answers['cliente']) lines.push('*' + L(answers['cliente']) + '*');
+  if(answers['tipo']==='PJ' && answers['responsavel']) lines.push('RESPONSAVEL: ' + L(answers['responsavel']));
+  if(answers['cliente'] || (answers['tipo']==='PJ' && answers['responsavel'])) lines.push('');
   if(answers['tipo']==='PJ'){
     if(answers['documento']) lines.push('CNPJ: ' + L(answers['documento']));
   } else {

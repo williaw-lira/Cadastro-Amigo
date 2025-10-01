@@ -53,6 +53,8 @@
       .wrap{max-width:100%;}
       .card{padding:8px;}
     }
+    .row-flex { display: flex; gap: 8px; }
+    .input-editable { margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -104,22 +106,24 @@
   </div>
 </div>
 <script>
+const planoOptions = [
+  'BLESS 900MB COM PORTABILIDADE 99,90',
+  'BLESS 600MB 99,90',
+  'BLESS 800MB 109,90/MÊS',
+  'BLESS 1GB 149,90/MÊS',
+  'BLESS 1,5GB 199,90/MÊS'
+];
 const steps = [
   {key:'vendedor', label:'Informe o nome do VENDEDOR', placeholder:'Ex: VENDEDOR BLESS', type:'text'},
   {key:'tipo', label:'Tipo de cliente', type:'select', options:[{v:'PF',t:'PESSOA FÍSICA'},{v:'PJ',t:'PESSOA JURÍDICA'}]},
-  {key:'cliente', label:'Informe o NOME DO CLIENTE (será o H1)', placeholder:'Ex: CLIENTE BLESS INTERNET', type:'text'},
-  {key:'responsavel', label:'Informe o RESPONSÁVEL (apenas PJ)', placeholder:'Ex: NOME DO RESPONSÁVEL', type:'text', onlyPJ:true},
-  {key:'documento', label:'Documento (CPF se PF / CNPJ se PJ)', placeholder:'Ex: 54541736810 ou 33108599000130', type:'text', mask:'cpf_cnpj'},
+  {key:'cliente', label:'Nome do CLIENTE (PF: nome completo | PJ: nome da empresa)', placeholder:'Ex: EMPRESA LTDA', type:'text'},
+  {key:'responsavel', label:'Nome do RESPONSÁVEL (apenas PJ)', placeholder:'Ex: NOME DO RESPONSÁVEL', type:'text', onlyPJ:true},
+  {key:'documento', label:'CNPJ (apenas PJ)', placeholder:'Ex: 12345678000199', type:'text', mask:'cpf_cnpj', onlyPJ:true},
+  {key:'cpf', label:'CPF (PF ou responsável PJ)', placeholder:'Ex: 12345678900', type:'text', mask:'cpf_cnpj'},
   {key:'rg', label:'RG', placeholder:'Ex: 398190239', type:'text'},
+  {key:'caracteristicas', label:'Possui internet? (se sim qual?)', placeholder:'Ex: SEM INTERNET', type:'textarea'},
   {key:'profissao', label:'Profissão', placeholder:'Ex: MECANICO', type:'text'},
-  {key:'caracteristicas', label:'Características (separe por vírgula, ponto e vírgula ou Enter)', placeholder:'Ex: COM INOVA', type:'textarea'},
-  {key:'plano', label:'Plano', type:'select', options:[
-    {v:'BLESS 900MB COM PORTABILIDADE 99,90',t:'BLESS 900MB COM PORTABILIDADE 99,90'},
-    {v:'BLESS 600MB 99,90',t:'BLESS 600MB 99,90'},
-    {v:'BLESS 800MB 109,90/MÊS',t:'BLESS 800MB 109,90/MÊS'},
-    {v:'BLESS 1GB 149,90/MÊS',t:'BLESS 1GB 149,90/MÊS'},
-    {v:'BLESS 1,5GB 199,90/MÊS',t:'BLESS 1,5GB 199,90/MÊS'}
-  ]},
+  {key:'plano', label:'Plano', type:'select-editable', options:planoOptions},
   {key:'sexo', label:'Estado civil', type:'select', options:[{v:'CASADO',t:'CASADO'},{v:'CASADA',t:'CASADA'}]},
   {key:'endereco_log', label:'Endereço - rua e número', placeholder:'AV BRASIL - 00', type:'text'},
   {key:'endereco_bairro', label:'Bairro', placeholder:'ZONA 07', type:'text'},
@@ -158,8 +162,10 @@ function maskCEP(v){
 }
 
 function setQuestion(i){
-  // Pular campo responsável se não for PJ
   if(steps[i].key === 'responsavel' && answers['tipo'] !== 'PJ') {
+    setQuestion(i+1); return;
+  }
+  if(steps[i].key === 'documento' && answers['tipo'] !== 'PJ') {
     setQuestion(i+1); return;
   }
   index = Math.max(0, Math.min(i, steps.length-1));
@@ -177,6 +183,42 @@ function setQuestion(i){
       el.appendChild(o);
     });
     el.value = answers[s.key]||s.options[0].v;
+  } else if(s.type==='select-editable'){
+    const row = document.createElement('div');
+    row.className = 'row-flex';
+    const sel = document.createElement('select');
+    sel.className = 'select';
+    planoOptions.forEach(opt=>{
+      const o = document.createElement('option');
+      o.value = opt;
+      o.textContent = opt;
+      sel.appendChild(o);
+    });
+    sel.value = answers[s.key]||planoOptions[0];
+    const inp = document.createElement('input');
+    inp.className = 'input input-editable';
+    inp.type = 'text';
+    inp.value = answers[s.key]||sel.value;
+    inp.placeholder = 'Digite ou edite o plano';
+    sel.addEventListener('change', ()=>{
+      inp.value = sel.value;
+      inp.focus();
+    });
+    inp.addEventListener('input', ()=>{ inp.value = toUpper(inp.value); });
+    inp.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' && !e.shiftKey){
+        e.preventDefault();
+        answers[s.key] = inp.value.trim();
+        renderChips();
+        if(index < steps.length-1) setQuestion(index+1);
+        buildPreview();
+      }
+    });
+    row.appendChild(sel);
+    row.appendChild(inp);
+    inputWrap.appendChild(row);
+    inp.focus();
+    return;
   } else if(s.type==='textarea'){
     el = document.createElement('textarea');
     el.className = 'input';
@@ -239,11 +281,8 @@ function buildPreview(){
   if(answers['cliente']) lines.push('*' + L(answers['cliente']) + '*');
   if(answers['tipo']==='PJ' && answers['responsavel']) lines.push('RESPONSAVEL: ' + L(answers['responsavel']));
   if(answers['cliente'] || (answers['tipo']==='PJ' && answers['responsavel'])) lines.push('');
-  if(answers['tipo']==='PJ'){
-    if(answers['documento']) lines.push('CNPJ: ' + L(answers['documento']));
-  } else {
-    if(answers['documento']) lines.push('CPF: ' + L(answers['documento']));
-  }
+  if(answers['tipo']==='PJ' && answers['documento']) lines.push('CNPJ: ' + L(answers['documento']));
+  if(answers['cpf']) lines.push('CPF: ' + L(answers['cpf']));
   if(answers['rg']) lines.push('RG: ' + L(answers['rg']));
   if(answers['caracteristicas']){
     let parts = answers['caracteristicas'].split(/[\n,;]+/).map(x=>L(x.trim())).filter(Boolean);
@@ -277,7 +316,11 @@ function buildPreview(){
 
 function confirmAnswer(){
   const s = steps[index];
-  let val = document.getElementById('answerInput').value.trim();
+  let val;
+  if(s.type==='select-editable'){
+    return;
+  }
+  val = document.getElementById('answerInput').value.trim();
   if(s.type==='select') val = document.getElementById('answerInput').value;
   if(s.type==='textarea') val = val.replace(/\r\n/g,'\n');
   answers[s.key] = val;

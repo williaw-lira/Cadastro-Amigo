@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Orçamento — BLESS</title>
+  <link rel="icon" type="image/png" href="png/LOGO-BLESS-PNG.png" />
+  <style>
+    :root{
+      --page-bg: #10131c;
+      --bg:#ffffff;
+      --brand:#eebd3d;
+      --dark:#1f2433;
+      --muted:#666;
+      --card:#f7f7f9;
+      --accent:#0b2340;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body{
+      margin:0;
+      font-family:Arial,Helvetica,sans-serif;
+      background:var(--page-bg);
+      color:var(--dark);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    /* folha/A4 */
+    .sheet{
+      width:794px; /* aproximado A4 @96dpi */
+      max-width:100%;
+      background:var(--bg);
+      box-shadow:0 8px 30px rgba(0,0,0,.12);
+      border-radius:8px;
+      padding:18px;
+    }
+    header{display:flex;justify-content:space-between;align-items:center;}
+    .logo{display:flex;gap:12px;align-items:center;}
+    .logo img{width:84px;height:auto;}
+    h1{margin:0;font-size:20px;color:var(--accent);}
+    .meta{font-size:12px;color:var(--muted);}
+    .cliente{margin-top:12px;border-radius:6px;padding:10px;background:var(--card);display:flex;gap:12px;flex-wrap:wrap;}
+    .cliente div{min-width:160px}
+    .cliente strong{display:block;color:var(--muted);font-size:12px}
+    table{width:100%;border-collapse:collapse;margin-top:14px;background:#fff; table-layout:fixed;}
+    thead tr th { padding:8px; }
+    th,td{padding:8px;border:1px solid #d8dbe0;text-align:left;font-size:13px;vertical-align:middle;word-break:break-word;}
+    th{background:linear-gradient(90deg,var(--brand),#f5f5f5);color:var(--dark);font-weight:700}
+    /* colunas fixas para evitar corte */
+    th:nth-child(1), td:nth-child(1){width:36px;}
+    th:nth-child(2), td:nth-child(2){width:54%;}
+    th:nth-child(3), td:nth-child(3){width:90px;}
+    th:nth-child(4), td:nth-child(4){width:120px;}
+    th:nth-child(5), td:nth-child(5){width:70px;}
+    .foot{margin-top:12px;font-size:13px;color:var(--muted)}
+    .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    .btn{background:var(--brand);border:none;padding:8px 12px;border-radius:6px;color:var(--dark);cursor:pointer;font-weight:700}
+    .btn.ghost{background:transparent;border:1px solid var(--brand);color:var(--muted)}
+    .small-note{font-size:12px;color:var(--muted)}
+    .editable{background:#fffbe6;outline:2px dashed rgba(0,0,0,0.08)}
+    .right{text-align:right}
+    .total-row td{font-weight:700;background:#faf6e6}
+    .icon-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:4px}
+    .icon-btn:hover{background:#f2f2f2}
+    .controls-top{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:12px}
+    .controls-top .left{display:flex;gap:8px}
+    .desc-cell{white-space:normal}
+    .val-cell{white-space:nowrap}
+    @media(max-width:980px){ .sheet{width:100%} }
+
+    /* ===== regras específicas para geração de PDF ===== */
+    .pdf-mode .row-select,
+    .pdf-mode .icon-btn,
+    .pdf-mode .actions,
+    .pdf-mode .controls-top,
+    .pdf-mode .btn.ghost { display:none !important; }
+
+    /* remove coluna checkbox (primeira) e coluna ações (última) no PDF */
+    .pdf-mode th:first-child, .pdf-mode td:first-child,
+    .pdf-mode th:last-child, .pdf-mode td:last-child { display:none !important; }
+
+    /* reduz fontes/paddings no modo pdf para evitar overflow */
+    .pdf-mode .sheet { padding:12px !important; box-shadow:none !important; border-radius:2px; }
+    .pdf-mode th, .pdf-mode td { padding:6px !important; font-size:12px !important; }
+    .pdf-mode h1 { font-size:18px !important; }
+    .pdf-mode .total-row td { font-size:13px !important; }
+  </style>
+</head>
+<body>
+  <div class="sheet" id="pdfContent">
+    <header>
+      <div class="logo">
+        <img src="png/LOGO-BLESS-PNG.png" alt="Bless">
+        <div>
+          <h1>ORÇAMENTO — BLESS INTERNET</h1>
+          <div class="meta" id="metaDate">Data: </div>
+        </div>
+      </div>
+      <div class="small-note">FIDELIDADE DE 12 MESES - INSTALAÇÃO GRATUITA</div>
+    </header>
+
+    <div class="cliente" id="clienteInfo">
+      <div>
+        <strong>Cliente</strong>
+        <div id="c_nome" contenteditable="true" class="editable">-</div>
+      </div>
+      <div>
+        <strong>CNPJ / CPF</strong>
+        <div id="c_doc" contenteditable="true" class="editable">-</div>
+      </div>
+      <div>
+        <strong>Endereço</strong>
+        <div id="c_end" contenteditable="true" class="editable">-</div>
+      </div>
+      <div>
+        <strong>Cidade - UF</strong>
+        <div id="c_cid" contenteditable="true" class="editable">-</div>
+      </div>
+      <div>
+        <strong>Telefone</strong>
+        <div id="c_tel" contenteditable="true" class="editable">-</div>
+      </div>
+      <div>
+        <strong>Email</strong>
+        <div id="c_email" contenteditable="true" class="editable">-</div>
+      </div>
+    </div>
+
+    <div class="controls-top">
+      <div class="left">
+        <button id="addRow" class="btn">Adicionar item</button>
+        <button id="toggleEdit" class="btn ghost">Ativar Edição</button>
+        <button id="clearSelected" class="btn ghost">Apagar selecionados</button>
+      </div>
+      <div>
+        <span style="color:var(--muted)">Selecione linhas com checkbox para apagar.</span>
+      </div>
+    </div>
+
+    <table aria-label="Tabela de planos" id="plansTable">
+      <thead>
+        <tr>
+          <th></th>
+          <th>DESCRIÇÃO</th>
+          <th>QUANTIDADE</th>
+          <th>VALOR (R$)</th>
+          <th>AÇÕES</th>
+        </tr>
+      </thead>
+      <tbody id="plansBody"></tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="3" style="text-align:right">TOTAL (R$)</td>
+          <td id="totalValue" class="right">0,00</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="foot">
+      <div style="margin-top:12px"><strong>Observações:</strong></div>
+      <div id="obsText" class="small-note editable" contenteditable="true">---</div>
+
+      <div style="margin-top:18px">
+        <div><strong>Contato Comercial:</strong></div>
+        <div style="margin-top:6px">Douglas Oliveira - Coordenador Comercial</div>
+        <div>(44) 99914-2862 | douglas.oliveira@blessinternet.com.br</div>
+        <div>www.blessinternet.com</div>
+        <div style="margin-top:8px">Av. Dr. Alexandre Rasgulaeff, 4061 - Parque Res. Cidade Nova, Maringá - PR, 87023-060</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="downloadPdf" class="btn">Baixar PDF</button>
+      <button id="saveBtn" class="btn ghost">Salvar Orçamento</button>
+      <button id="backBtn" class="btn ghost">Voltar (abrir cadastro)</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <script>
+    const defaultPlans = [
+      ['BLESS 600 MB','1','99,90'],
+      ['BLESS 800 MB SEM PORTABILIDADE','1','109,90'],
+      ['BLESS 900 MB COM CONCORRÊNCIA','1','99,90'],
+      ['BLESS 1 GB','1','149,90'],
+      ['BLESS 1,5 GB + WI-FI 7','1','199,90'],
+      ['IP FIXO','1','80,00'],
+      ['LINHA DE TELEFONE ILIMITADA','1','49,90'],
+      ['PONTO EXTRA DE WI-FI (MESH)','1','50,00'],
+      ['DEDICADA BÁSICA — 50 MB','1','419,90'],
+      ['DEDICADA BÁSICA — 100 MB','1','549,90'],
+      ['DEDICADA BÁSICA — 250 MB','1','699,90'],
+      ['DEDICADO PRO — 100 MB','1','799,90'],
+      ['DEDICADO PRO — 150 MB','1','899,90'],
+      ['DEDICADO PRO — 250 MB','1','1199,90']
+    ];
+
+    function carregarDados(){
+      const raw = localStorage.getItem('cad_orcamento');
+      if(!raw) return null;
+      try{return JSON.parse(raw);}catch(e){return null;}
+    }
+    function salvarDadosStorage(obj){
+      try{ localStorage.setItem('cad_orcamento', JSON.stringify(obj)); return true; }
+      catch(e){ console.error(e); return false; }
+    }
+    function formatBR(num){ return num.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    function parseBR(str){
+      if(!str) return 0;
+      str = (''+str).trim().replace(/\s/g,'');
+      if(/\,\d{1,2}$/.test(str)){ str = str.replace(/\./g,'').replace(',', '.'); }
+      else { str = str.replace(/,/g,''); }
+      const n = parseFloat(str);
+      return isNaN(n)?0:n;
+    }
+
+    function createRow(desc, qty, val){
+      const tr = document.createElement('tr');
+      const tdCheck = document.createElement('td'); tdCheck.innerHTML = `<input type="checkbox" class="row-select">`; tr.appendChild(tdCheck);
+      const tdDesc = document.createElement('td'); tdDesc.className='desc-cell'; tdDesc.contentEditable = false; tdDesc.textContent = desc; tr.appendChild(tdDesc);
+      const tdQty = document.createElement('td'); tdQty.className='right qty-cell'; tdQty.contentEditable = false; tdQty.textContent = qty; tr.appendChild(tdQty);
+      const tdVal = document.createElement('td'); tdVal.className='right val-cell'; tdVal.contentEditable = false; tdVal.textContent = val; tr.appendChild(tdVal);
+      const tdAct = document.createElement('td'); tdAct.className='right'; tdAct.innerHTML = `<button class="icon-btn btn-edit" title="Editar linha">✎</button><button class="icon-btn btn-del" title="Apagar linha">🗑</button>`; tr.appendChild(tdAct);
+
+      tdAct.querySelector('.btn-del').addEventListener('click', ()=>{ tr.remove(); updateTotal(); });
+      tdAct.querySelector('.btn-edit').addEventListener('click', ()=>{
+        const editable = tdDesc.isContentEditable;
+        tdDesc.contentEditable = tdQty.contentEditable = tdVal.contentEditable = !editable;
+        tdDesc.classList.toggle('editable', !editable);
+        tdQty.classList.toggle('editable', !editable);
+        tdVal.classList.toggle('editable', !editable);
+        if(!editable) tdDesc.focus();
+      });
+
+      tdDesc.addEventListener('input', updateTotal);
+      tdQty.addEventListener('input', updateTotal);
+      tdVal.addEventListener('input', updateTotal);
+
+      return tr;
+    }
+
+    function populateTable(data){
+      const tbody = document.getElementById('plansBody');
+      tbody.innerHTML = '';
+      const rows = (data && data.table && data.table.length) ? data.table : defaultPlans;
+      rows.forEach(r=>{ const [d,q,v] = r; tbody.appendChild(createRow(d,q,v)); });
+      updateTotal();
+    }
+
+    function serializeTable(){
+      const rows = [];
+      document.querySelectorAll('#plansBody tr').forEach(tr=>{
+        const desc = tr.querySelector('.desc-cell').textContent.trim();
+        const qty = tr.querySelector('.qty-cell').textContent.trim();
+        const val = tr.querySelector('.val-cell').textContent.trim();
+        rows.push([desc, qty, val]);
+      });
+      return rows;
+    }
+
+    function updateTotal(){
+      let total = 0;
+      document.querySelectorAll('#plansBody tr').forEach(tr=>{
+        const qty = parseBR(tr.querySelector('.qty-cell').textContent || '0');
+        const val = parseBR(tr.querySelector('.val-cell').textContent || '0');
+        total += qty * val;
+      });
+      document.getElementById('totalValue').textContent = formatBR(total);
+    }
+
+    // preencher tela com storage
+    function preencherTela(data){
+      const a = (data && data.answers) ? data.answers : {};
+      document.getElementById('metaDate').textContent = 'Data: ' + (data && data.date ? data.date : new Date().toLocaleDateString('pt-BR'));
+      document.getElementById('c_nome').textContent = a.cliente || '';
+      document.getElementById('c_doc').textContent = a.documento || a.cpf || '';
+      document.getElementById('c_end').textContent = a.endereco_log || '';
+      document.getElementById('c_cid').textContent = a.endereco_cidade || '';
+      document.getElementById('c_tel').textContent = a.tel_titular || a.tel_recado || '';
+      document.getElementById('c_email').textContent = a.email || '';
+      document.getElementById('obsText').textContent = (data && data.obs) ? data.obs : '---';
+      populateTable(data);
+    }
+
+    // ações UI
+    document.getElementById('addRow').addEventListener('click', ()=>{
+      const tbody = document.getElementById('plansBody');
+      const tr = createRow('Novo item','1','0,00');
+      tbody.appendChild(tr);
+      tr.querySelector('.btn-edit').click();
+      updateTotal();
+    });
+
+    document.getElementById('toggleEdit').addEventListener('click', ()=>{
+      const btn = document.getElementById('toggleEdit');
+      const on = btn.textContent.includes('Ativar');
+      document.querySelectorAll('.desc-cell, .qty-cell, .val-cell').forEach(c=>{
+        c.contentEditable = on ? 'true' : 'false';
+        c.classList.toggle('editable', on);
+      });
+      btn.textContent = on ? 'Desativar Edição' : 'Ativar Edição';
+    });
+
+    document.getElementById('clearSelected').addEventListener('click', ()=>{
+      let removed = 0;
+      document.querySelectorAll('.row-select').forEach(ch=>{
+        if(ch.checked){ ch.closest('tr').remove(); removed++; }
+      });
+      if(removed) updateTotal();
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', ()=>{
+      const data = carregarDados() || {answers:{}};
+      data.answers = data.answers || {};
+      data.answers.cliente = document.getElementById('c_nome').textContent.trim();
+      data.answers.cpf = document.getElementById('c_doc').textContent.trim();
+      data.answers.documento = document.getElementById('c_doc').textContent.trim();
+      data.answers.endereco_log = document.getElementById('c_end').textContent.trim();
+      data.answers.endereco_cidade = document.getElementById('c_cid').textContent.trim();
+      data.answers.tel_titular = document.getElementById('c_tel').textContent.trim();
+      data.answers.email = document.getElementById('c_email').textContent.trim();
+      data.date = new Date().toLocaleDateString('pt-BR');
+      data.obs = document.getElementById('obsText').textContent.trim();
+      data.table = serializeTable();
+      const ok = salvarDadosStorage(data);
+      alert(ok ? 'Orçamento salvo no localStorage.' : 'Falha ao salvar.');
+    });
+
+    document.getElementById('backBtn').addEventListener('click', ()=>{
+      document.getElementById('saveBtn').click();
+      window.open('index.html','_self');
+    });
+
+    // gerar PDF: aplica classe .pdf-mode para ocultar controles
+    document.getElementById('downloadPdf').addEventListener('click', ()=>{
+      updateTotal();
+      document.getElementById('saveBtn').click();
+
+      // adiciona classe ao html para ativar estilos PDF
+      document.documentElement.classList.add('pdf-mode');
+
+      const element = document.getElementById('pdfContent');
+      const opt = {
+        margin:       [0.25,0.25,0.25,0.25],
+        filename:     'orcamento_bless.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 1.6, useCORS: true, logging:false },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save().then(()=>{
+        document.documentElement.classList.remove('pdf-mode');
+      }).catch((err)=>{
+        console.error(err);
+        document.documentElement.classList.remove('pdf-mode');
+      });
+    });
+
+    document.addEventListener('input', (e)=>{
+      if(e.target.matches('.desc-cell, .qty-cell, .val-cell')) updateTotal();
+    });
+
+    // init
+    const data = carregarDados();
+    preencherTela(data);
+    setInterval(updateTotal, 1000);
+  </script>
+</body>
+</html>

@@ -128,6 +128,7 @@
         <div style="display:flex;gap:8px;margin-top:10px">
           <button id="copyBtn" class="btn">Copiar para WhatsApp</button>
           <button id="waBtn" class="btn">Abrir WhatsApp Web</button>
+          <button id="genPdfBtn" class="btn">Gerar Orçamento</button>
           <button id="finalizeBtn" class="btn ghost">Finalizar (Limpar)</button>
         </div>
         <footer>
@@ -153,15 +154,16 @@
 <script>
 const planoOptions = [
   'BLESS 900MB COM PORTABILIDADE 99,90',
+  'BLESS 950MB PREDIAL 99,90',
   'BLESS 600MB 99,90',
   'BLESS 800MB 109,90/MÊS',
   'BLESS 1GB 149,90/MÊS',
   'BLESS 1,5GB 199,90/MÊS'
 ];
 const steps = [
-  {key:'vendedor', label:'Informe o nome do VENDEDOR', placeholder:'Ex: VENDEDOR BLESS', type:'text'},
+  {key:'vendedor', label:'Informe o nome do VENDEDOR', placeholder:'Ex: VENDEDOR BLESS', type:'text',},
   {key:'tipo', label:'Tipo de cliente', type:'select', options:[{v:'PF',t:'PESSOA FÍSICA'},{v:'PJ',t:'PESSOA JURÍDICA'}]},
-  {key:'cliente', label:'Nome do CLIENTE (PF: nome completo | PJ: nome da empresa)', placeholder:'Ex: EMPRESA LTDA', type:'text'},
+  {key:'cliente', label:'Nome do CLIENTE (PF: nome completo | PJ: nome da empresa)', placeholder:'Ex: CLIENTE LTDA', type:'text'},
   {key:'responsavel', label:'Nome do RESPONSÁVEL (apenas PJ)', placeholder:'Ex: NOME DO RESPONSÁVEL', type:'text', onlyPJ:true},
   {key:'documento', label:'CNPJ (apenas PJ)', placeholder:'Ex: 12345678000199', type:'text', mask:'cpf_cnpj', onlyPJ:true},
   {key:'cpf', label:'CPF (PF ou responsável PJ)', placeholder:'Ex: 12345678900', type:'text', mask:'cpf_cnpj'},
@@ -426,6 +428,32 @@ document.getElementById('finalizeBtn').addEventListener('click', ()=>{
   renderChips(); setQuestion(0);
   preview.textContent = 'AQUI FICARÁ O TEXTO DO CADASTRO';
   statusSpan.textContent = 'PRONTO';
+});
+
+// salva dados atuais do cadastro para a página de orçamento
+function salvarParaOrcamento(){
+  const payload = {
+    answers,
+    includeChecklist,
+    status: statusSpan ? statusSpan.textContent : 'PRONTO',
+    date: new Date().toLocaleDateString('pt-BR')
+  };
+  try{
+    localStorage.setItem('cad_orcamento', JSON.stringify(payload));
+    return true;
+  }catch(e){
+    console.error('Erro ao salvar orçamento:', e);
+    return false;
+  }
+}
+
+// abre a página de orçamento (nova aba)
+document.getElementById('genPdfBtn').addEventListener('click', ()=>{
+  if(!salvarParaOrcamento()){
+    alert('Não foi possível salvar os dados localmente.');
+    return;
+  }
+  window.open('orcamento.html', '_blank');
 });
 
 function init(){ setQuestion(0); renderChips(); buildPreview(); }

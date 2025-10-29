@@ -132,6 +132,7 @@
         <button id="addRow" class="btn">Adicionar item</button>
         <button id="toggleEdit" class="btn ghost">Ativar Edição</button>
         <button id="clearSelected" class="btn ghost">Apagar selecionados</button>
+        <button id="toggleTotal" class="btn ghost">Esconder Total</button>
       </div>
       <div>
         <span style="color:var(--muted)">Selecione linhas com checkbox para apagar.</span>
@@ -141,7 +142,7 @@
     <table aria-label="Tabela de planos" id="plansTable">
       <thead>
         <tr>
-          <th></th>
+          <th><input type="checkbox" id="selectAll" title="Selecionar todos"></th>
           <th>DESCRIÇÃO</th>
           <th>QUANTIDADE</th>
           <th>VALOR (R$)</th>
@@ -149,7 +150,7 @@
         </tr>
       </thead>
       <tbody id="plansBody"></tbody>
-      <tfoot>
+      <tfoot id="totalRow">
         <tr class="total-row">
           <td colspan="3" style="text-align:right">TOTAL (R$)</td>
           <td id="totalValue" class="right">0,00</td>
@@ -247,6 +248,9 @@
       const rows = (data && data.table && data.table.length) ? data.table : defaultPlans;
       rows.forEach(r=>{ const [d,q,v] = r; tbody.appendChild(createRow(d,q,v)); });
       updateTotal();
+      // set selectAll to unchecked
+      const sel = document.getElementById('selectAll');
+      if(sel) sel.checked = false;
     }
 
     function serializeTable(){
@@ -282,6 +286,10 @@
       document.getElementById('c_email').textContent = a.email || '';
       document.getElementById('obsText').textContent = (data && data.obs) ? data.obs : '---';
       populateTable(data);
+      // show/hide total according to saved flag (default true)
+      const showTotal = (data && typeof data.showTotal !== 'undefined') ? !!data.showTotal : true;
+      document.getElementById('totalRow').style.display = showTotal ? '' : 'none';
+      document.getElementById('toggleTotal').textContent = showTotal ? 'Esconder Total' : 'Mostrar Total';
     }
 
     // ações UI
@@ -309,6 +317,22 @@
         if(ch.checked){ ch.closest('tr').remove(); removed++; }
       });
       if(removed) updateTotal();
+      // after removal, uncheck selectAll
+      document.getElementById('selectAll').checked = false;
+    });
+
+    // select all checkbox
+    document.getElementById('selectAll').addEventListener('change', (e)=>{
+      const on = e.target.checked;
+      document.querySelectorAll('.row-select').forEach(ch => ch.checked = on);
+    });
+
+    // toggle total visibility
+    document.getElementById('toggleTotal').addEventListener('click', ()=>{
+      const totalRow = document.getElementById('totalRow');
+      const visible = totalRow.style.display !== 'none';
+      totalRow.style.display = visible ? 'none' : '';
+      document.getElementById('toggleTotal').textContent = visible ? 'Mostrar Total' : 'Esconder Total';
     });
 
     document.getElementById('saveBtn').addEventListener('click', ()=>{
@@ -324,6 +348,8 @@
       data.date = new Date().toLocaleDateString('pt-BR');
       data.obs = document.getElementById('obsText').textContent.trim();
       data.table = serializeTable();
+      // persist showTotal flag
+      data.showTotal = document.getElementById('totalRow').style.display !== 'none';
       const ok = salvarDadosStorage(data);
       alert(ok ? 'Orçamento salvo no localStorage.' : 'Falha ao salvar.');
     });
@@ -333,12 +359,11 @@
       window.open('index.html','_self');
     });
 
-    // gerar PDF: aplica classe .pdf-mode para ocultar controles
+    // gerar PDF: aplica classe .pdf-mode para ocultar controles (respeita totalRow visibility)
     document.getElementById('downloadPdf').addEventListener('click', ()=>{
       updateTotal();
       document.getElementById('saveBtn').click();
 
-      // adiciona classe ao html para ativar estilos PDF
       document.documentElement.classList.add('pdf-mode');
 
       const element = document.getElementById('pdfContent');
@@ -360,6 +385,12 @@
 
     document.addEventListener('input', (e)=>{
       if(e.target.matches('.desc-cell, .qty-cell, .val-cell')) updateTotal();
+      // keep header selectAll state in sync
+      if(e.target.matches('.row-select')) {
+        const all = document.querySelectorAll('.row-select');
+        const checked = Array.from(all).every(ch => ch.checked);
+        document.getElementById('selectAll').checked = checked;
+      }
     });
 
     // init
